@@ -1,57 +1,72 @@
-const Task = require("../model/task");
+const { Task } = require('../model/task');
+const mongoose = require('mongoose');
 
-//sample tasks to get first at /tasks route
-let tasks = [
-  {
-    id: 1,
-    title: "Finish refferal app project ",
-    description: "Complete API implementation",
-    dueDate: "2025-08-30",
-    status: "completed"
-  }
-]
-// i can use third party module uuid for unique id , for now i use my own variable
-let currentId = 1;
 
-// Get all tasks
-function getAllTasks() {
-  return tasks;
+function isValidObjectId(id) {
+return mongoose.Types.ObjectId.isValid(id);
 }
 
-// Get task by ID
-function getTaskById(id) {
-  return tasks.find(task => task.id === id);
+
+async function getAllTasks() {
+const tasks = await Task.find({}).sort({ createdAt: -1 }).lean();
+// .lean() uses transform in schema's toJSON only on docs; so map manually
+return tasks.map((t) => ({
+id: t._id.toString(),
+title: t.title,
+description: t.description,
+dueDate: t.dueDate,
+status: t.status,
+createdAt: t.createdAt,
+updatedAt: t.updatedAt,
+}));
 }
 
-// Create new task
-function createTask(title, description, dueDate, status) {
-  const task = new Task(currentId++, title, description, dueDate, status);
-  tasks.push(task);
-  return task;
+
+async function getTaskById(id) {
+if (!isValidObjectId(id)) return null;
+const t = await Task.findById(id).lean();
+if (!t) return null;
+return {
+id: t._id.toString(),
+title: t.title,
+description: t.description,
+dueDate: t.dueDate,
+status: t.status,
+createdAt: t.createdAt,
+updatedAt: t.updatedAt,
+};
 }
 
-// Update task
-function updateTask(id, updatedData) {
-  const task = getTaskById(id);
-  if (!task) return null;
 
-  Object.assign(task, updatedData);
-  return task;
+async function createTask({ title, description, dueDate, status }) {
+const doc = await Task.create({ title, description, dueDate, status });
+return doc.toJSON();
 }
 
-// Delete task
-function deleteTask(id) {
-  const index = tasks.findIndex(task => task.id === id);
-  if (index === -1) return null;
 
-  const deletedTask = tasks.splice(index, 1);
-  return deletedTask[0];
+async function updateTask(id, data) {
+if (!isValidObjectId(id)) return null;
+const allowed = ['title', 'description', 'dueDate', 'status'];
+const update = {};
+for (const k of allowed) if (data[k] !== undefined) update[k] = data[k];
+
+
+const doc = await Task.findByIdAndUpdate(id, update, { new: true, runValidators: true });
+return doc ? doc.toJSON() : null;
 }
+
+
+async function deleteTask(id) {
+if (!isValidObjectId(id)) return null;
+const doc = await Task.findByIdAndDelete(id);
+return !!doc;
+}
+
 
 module.exports = {
-  getAllTasks,
-  getTaskById,
-  createTask,
-  updateTask,
-  deleteTask,
+getAllTasks,
+getTaskById,
+createTask,
+updateTask,
+deleteTask,
 };

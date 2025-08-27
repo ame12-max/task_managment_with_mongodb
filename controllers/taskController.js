@@ -1,45 +1,58 @@
-const taskService = require("../data/taskService");
+const taskService = require('../data/taskService');
 
-// Get all tasks
-exports.getTasks = (req, res) => {
-  const tasks = taskService.getAllTasks();
-  res.json(tasks);
+
+exports.getTasks = async (req, res, next) => {
+try {
+const tasks = await taskService.getAllTasks();
+res.json(tasks);
+} catch (err) {
+next(err);
+}
 };
 
-// Get task by ID
-exports.getTaskById = (req, res) => {
-  const task = taskService.getTaskById(parseInt(req.params.id));
-  if (!task) {
-    return res.status(404).json({ message: "Task not found" });
-  }
-  res.json(task);
+
+exports.getTaskById = async (req, res, next) => {
+try {
+const task = await taskService.getTaskById(req.params.id);
+if (!task) return res.status(404).json({ message: 'Task not found' });
+res.json(task);
+} catch (err) {
+next(err);
+}
 };
 
-// Create new task
-exports.createTask = (req, res) => {
-  const { title, description, dueDate, status } = req.body;
-  if (!title || !description || !dueDate) {
-    return res.status(400).json({ message: "Missing required fields" });
-  }
 
-  const newTask = taskService.createTask(title, description, dueDate, status);
-  res.status(201).json(newTask);
+exports.createTask = async (req, res, next) => {
+try {
+const { title, description, dueDate, status } = req.body || {};
+if (!title || !description || !dueDate) {
+return res.status(400).json({ message: 'Missing required fields: title, description, dueDate' });
+}
+const newTask = await taskService.createTask({ title, description, dueDate, status });
+res.status(201).json(newTask);
+} catch (err) {
+next(err);
+}
 };
 
-// Update task
-exports.updateTask = (req, res) => {
-  const updatedTask = taskService.updateTask(parseInt(req.params.id), req.body);
-  if (!updatedTask) {
-    return res.status(404).json({ message: "Task not found" });
-  }
-  res.json(updatedTask);
+
+exports.updateTask = async (req, res, next) => {
+try {
+const updatedTask = await taskService.updateTask(req.params.id, req.body || {});
+if (!updatedTask) return res.status(404).json({ message: 'Task not found' });
+res.json(updatedTask);
+} catch (err) {
+next(err);
+}
 };
 
-// Delete task
-exports.deleteTask = (req, res) => {
-  const deletedTask = taskService.deleteTask(parseInt(req.params.id));
-  if (!deletedTask) {
-    return res.status(404).json({ message: "Task not found" });
-  }
-  res.json({ message: "Task deleted successfully" });
+
+exports.deleteTask = async (req, res, next) => {
+try {
+const ok = await taskService.deleteTask(req.params.id);
+if (!ok) return res.status(404).json({ message: 'Task not found' });
+res.json({ message: 'Task deleted successfully' });
+} catch (err) {
+next(err);
+}
 };
